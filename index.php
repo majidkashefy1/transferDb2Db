@@ -9,52 +9,105 @@ $tablesNew = include 'to.php';//fill
 $connections = connectToDbs($db);
 
 //$oldData = fetchData($connections['old'], $tablesOld, $tablesNew); //array
-$oldData = [
-    'users'=>[
-        [
-            'id'=>1,
-            'name'=>'name1',
-            'email'=>'name1@sdf.dsdf',
-        ],
-        [
-            'id'=>2,
-            'name'=>'nam222',
-            'email'=>'na222@qq.ww',
-        ],
-    ]
-]; //array
-echo '<pre>';var_dump($oldData,$tablesNew);die;
+$sqlMulti = "select
+    users.id as userId
+        LEFT JOIN pcmfx_cabin_old.users_legal_documents ON pcmfx_cabin_old.users.id=pcmfx_cabin_old.users_legal_documents.cabin_id
+    LEFT JOIN pcmfx_cabin_old.users_api_details ON pcmfx_cabin_old.users.id=pcmfx_cabin_old.users_api_details.user_id
+    LEFT JOIN pcmfx_cabin_old.documents ON pcmfx_cabin_old.users.id=pcmfx_cabin_old.documents.uid
+    LEFT JOIN pcmfx_cabin_old.accounts ON pcmfx_cabin_old.users.id=pcmfx_cabin_old.accounts.uid
+    ;";
+
+$sqlSingle = "select
+    users.id as userId
+    ,users.name as userName
+    ,users.lastname as userLastName
+    ,users.email as userEmail
+    ,users.phone as userPhone
+    ,users.mobile as userMobile
+    ,users.sex as gender
+    ,users.dob as userBirthDay
+    ,users.country as userCountry
+    ,users.city as userCity
+    ,users.address as userAddress
+    ,users.csh as userCitizenShip
+    ,users.profession as userProfession
+    ,users.leverage as userLeverage
+    ,users.experience as userExperience
+    ,users.instruments as userInstruments
+    ,users.assets as userAssets
+    ,users.fatca as userFatf
+    ,users.style as userStyle
+    ,users.ts as userTimeStamp
+    ,users.hear as userHear
+    ,users.htext as userHearDesc
+    ,users.pin as userPincde
+    ,users.lastip as userLastIp
+    ,users.activity as userActivity
+    ,users.pincount as userPincount
+    ,users.activated as userActivated
+    ,users.confirmed as userConfirmed
+    ,users.referral as userReferral
+    ,users.roll as userRoll
+    ,users.lang as userLang
+    ,users.mobstat as userMobileState   
+    ,users_passwd.cabin_id as passwordCabinId
+    ,users_passwd.passwd as password
+    ,users_legal_information.passwd as password
+    ,users_legal_information.cabin_id as legalInfoCabinId
+	,users_legal_information.company_name as legalInfoCompanyName
+	,users_legal_information.company_national_id as legalInfoNationalId
+	,users_legal_information.company_type as legalInfoCompanyType
+	,users_legal_information.company_type_description as legalInfoCompanyTypeDesc
+	,users_legal_information.registration_city as legalInfoRegistrationCity
+	,users_legal_information.registration_date as legalInfoRegistrationDate
+    from pcmfx_cabin_old.users 
+    LEFT JOIN pcmfx_cabin_old.users_passwd ON pcmfx_cabin_old.users.id=pcmfx_cabin_old.users_passwd.cabin_id 
+    LEFT JOIN pcmfx_cabin_old.users_legal_information ON pcmfx_cabin_old.users.id=pcmfx_cabin_old.users_legal_information.cabin_id
+
+;";
+if (mysqli_query($connections['old'], $sqlSingle)) {
+    $result = mysqli_query($connections['old'], $sqlSingle);
+//            $data[$table] = $result->fetch_assoc();
+    $data = mysqli_fetch_all($result, MYSQLI_ASSOC);
+    echo '<pre>';
+    var_dump($data);
+    die;
+    foreach (mysqli_fetch_all(mysqli_query($connections['old'], $sql), MYSQLI_ASSOC) as $row) {
+        $sqls = ["users" => "INSERT INTO new2.users(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
+
+        foreach ($sqls as $sql) {
+            if (mysqli_query($connections['old'], $sql)) {
+                echo "New record created successfully" . '<br>';
+            } else {
+                echo "Error: " . $sql . "<br>" . mysqli_error($connections['old']);
+            }
+        }
+
+    }
+} else {
+    echo "Error: " . $sqlSingle . "<br>" . mysqli_error($connections['old']);
+}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+echo '<pre>';
+//var_dump($oldData, $tablesNew);
+die;
 
 
 foreach ($oldData as $table => $rows) {
 //        echo '<pre>';var_dump($table , $columns);die;
     foreach ($rows as $row) {
 //        echo '<pre>';var_dump($row);die;
-        $tables=[];
+        $tables = [];
         foreach ($row as $column => $value) {
-            echo '<pre>';var_dump($configs[$table]);
-            echo '<pre>';var_dump($row,$column,$value);die;
+            echo '<pre>';
+            var_dump($configs[$table]);
+            echo '<pre>';
+            var_dump($row, $column, $value);
+            die;
         }
 
-        foreach ($tables as $table){
+        foreach ($tables as $table) {
             $sql = "INSERT INTO {$db['dbnameNew']}.{$table}({$column}) VALUES ({$values})";
         }
     }

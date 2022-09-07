@@ -31,29 +31,23 @@ $sqlSingle = "select
     ,users.address as userAddress
     ,users.csh as userCitizenShip
     ,users.profession as userProfession
-    ,users.leverage as userLeverage
     ,users.experience as userExperience
-    ,users.instruments as userInstruments
     ,users.assets as userAssets
     ,users.fatca as userFatf
     ,users.style as userStyle
-    ,users.ts as userTimeStamp
+    ,users.ts as userCreatedAt
     ,users.hear as userHear
     ,users.htext as userHearDesc
-    ,users.pin as userPincde
+    ,users.pin as userPincode
     ,users.lastip as userLastIp
-    ,users.activity as userActivity
+    ,users.activity as userLastActivityTime
     ,users.pincount as userPincount
     ,users.activated as userActivated
     ,users.confirmed as userConfirmed
-    ,users.referral as userReferral
-    ,users.roll as userRoll
+    ,users.referral as referralId
     ,users.lang as userLang
     ,users.mobstat as userMobileState   
-    ,users_passwd.cabin_id as passwordCabinId
     ,users_passwd.passwd as password
-    ,users_legal_information.passwd as password
-    ,users_legal_information.cabin_id as legalInfoCabinId
 	,users_legal_information.company_name as legalInfoCompanyName
 	,users_legal_information.company_national_id as legalInfoNationalId
 	,users_legal_information.company_type as legalInfoCompanyType
@@ -73,7 +67,12 @@ if (mysqli_query($connections['old'], $sqlSingle)) {
     var_dump($data);
     die;
     foreach (mysqli_fetch_all(mysqli_query($connections['old'], $sql), MYSQLI_ASSOC) as $row) {
-        $sqls = ["users" => "INSERT INTO new2.users(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
+        $sqls = ["users" => "INSERT INTO new2.users(id,first_name,last_name,email) VALUES ('{$row['userId']}','{$row['userName']}','{$row['userLastName']}','{$row['userEmail']}')"];
+        $sqls = ["mobiles" => "INSERT INTO new2.users(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
+        $sqls = ["dResidencies" => "INSERT INTO new2.document_residencies(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
+        $sqls = ["locations" => "INSERT INTO new2.user_locations(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
+        $sqls = ["fatf" => "INSERT INTO new2.financial_action_task_force_answer_users(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
+
 
         foreach ($sqls as $sql) {
             if (mysqli_query($connections['old'], $sql)) {
@@ -82,7 +81,6 @@ if (mysqli_query($connections['old'], $sqlSingle)) {
                 echo "Error: " . $sql . "<br>" . mysqli_error($connections['old']);
             }
         }
-
     }
 } else {
     echo "Error: " . $sqlSingle . "<br>" . mysqli_error($connections['old']);

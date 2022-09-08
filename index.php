@@ -9,6 +9,11 @@ $tablesNew = include 'to.php';//fill
 $connections = connectToDbs($db);
 
 //$oldData = fetchData($connections['old'], $tablesOld, $tablesNew); //array
+//users_legal_documents
+//tickets
+//replies
+//documents
+//deposit_bank_account_history
 $sqlMulti = "select
     users.id as userId
         LEFT JOIN pcmfx_cabin_old.users_legal_documents ON pcmfx_cabin_old.users.id=pcmfx_cabin_old.users_legal_documents.cabin_id
@@ -63,17 +68,26 @@ if (mysqli_query($connections['old'], $sqlSingle)) {
     $result = mysqli_query($connections['old'], $sqlSingle);
 //            $data[$table] = $result->fetch_assoc();
     $data = mysqli_fetch_all($result, MYSQLI_ASSOC);
-    echo '<pre>';
-    var_dump($data);
-    die;
-    foreach (mysqli_fetch_all(mysqli_query($connections['old'], $sql), MYSQLI_ASSOC) as $row) {
-        $sqls = ["users" => "INSERT INTO new2.users(id,first_name,last_name,email) VALUES ('{$row['userId']}','{$row['userName']}','{$row['userLastName']}','{$row['userEmail']}')"];
-        $sqls = ["mobiles" => "INSERT INTO new2.users(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
-        $sqls = ["dResidencies" => "INSERT INTO new2.document_residencies(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
-        $sqls = ["locations" => "INSERT INTO new2.user_locations(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
-        $sqls = ["fatf" => "INSERT INTO new2.financial_action_task_force_answer_users(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
-
-
+//    echo '<pre>';var_dump($data);die;
+    foreach ($data as $row) {
+//        $userPhone = $row['userPhone'];
+//        $userPhone=explode('+', $userPhone);
+//        checkPhoneCode('00');
+//        echo '<pre>';var_dump($userPhone[1],mb_substr($userPhone[1], 2));die;
+        $createdAt = date("Y-m-d", $row['userCreatedAt']);
+        $userMobile = $row['userMobile'];
+        $password = base64_decode($row['password']);
+        echo '<pre>';var_dump($password);die;
+        $sqls = ["users" => "INSERT INTO new2.users(`id`,`first_name`,`last_name`,`email`,`created_at`,`last_ip`,`is_active`,`language`,`password`) 
+                                        VALUES ('{$row['userId']}','{$row['userName']}','{$row['userLastName']}','{$row['userEmail']}','$createdAt}','{$row['userLastIp']}','{$row['userActivated']}','{$row['userLang']}','{$row['password']}')"];
+//        $sqls = ["mobiles" => "INSERT INTO new2.users(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
+//        $sqls = ["dResidencies" => "INSERT INTO new2.document_residencies(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
+//        $sqls = ["locations" => "INSERT INTO new2.user_locations(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
+//        $sqls = ["fatf" => "INSERT INTO new2.financial_action_task_force_answer_users(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
+//
+        echo '<pre>';
+        var_dump($sqls);
+        die;
         foreach ($sqls as $sql) {
             if (mysqli_query($connections['old'], $sql)) {
                 echo "New record created successfully" . '<br>';

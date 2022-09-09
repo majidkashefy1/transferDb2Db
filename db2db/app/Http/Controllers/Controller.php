@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use Hekmatinasser\Verta\Facades\Verta;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Hash;
+use Morilog\Jalali\Jalalian;
 
 class Controller extends BaseController
 {
@@ -242,7 +244,7 @@ class Controller extends BaseController
         'servernameNew' => "localhost",
         'usernameNew' => "root",
         'passwordNew' => "",
-        'dbnameNew' => "new2",
+        'dbnameNew' => "pcmpanelv3",
     ];
     public $sqlSingle = "select
     users.id as userId
@@ -251,7 +253,7 @@ class Controller extends BaseController
     ,users.email as userEmail
     ,users.phone as userPhone
     ,users.mobile as userMobile
-    ,users.sex as gender
+    ,users.sex as userGender
     ,users.dob as userBirthDay
     ,users.country as userCountry
     ,users.city as userCity
@@ -259,13 +261,14 @@ class Controller extends BaseController
     ,users.csh as userCitizenShip
     ,users.profession as userProfession
     ,users.experience as userExperience
-    ,users.assets as userAssets
+    ,users.assets as userTradeAssets
     ,users.fatca as userFatf
-    ,users.style as userStyle
+    ,users.style as userTradeStyle
     ,users.ts as userCreatedAt
     ,users.hear as userHear
     ,users.htext as userHearDesc
     ,users.pin as userPincode
+    ,users.lastts as userLastLogin
     ,users.lastip as userLastIp
     ,users.activity as userLastActivityTime
     ,users.pincount as userPincount
@@ -302,28 +305,46 @@ class Controller extends BaseController
                 $areaCodeMobile = $this->convertNumber($row['userMobile'])['code'];
                 $mobile = $this->convertNumber($row['userMobile'])['number'];
                 $createdAt = date("Y-m-d", $row['userCreatedAt']);
-                $userMobile = $row['userMobile'];
+                $lastLogin = date("Y-m-d", $row['userLastLogin']);
                 $password = Hash::make(base64_decode($row['password']));
                 $emilVerified = now();
-                $isBanned = !$row['userConfirmed'];
-//                dd($row['userLastIp']);
-                $sqls = ["users" => "INSERT INTO new2.users(`id`,`first_name`,`last_name`,`email`,`created_at`,`last_ip`,`is_active`,`language`,`password`,`phone_country_code`,`phone`,`email_verified_at`,`last_activity`, `last_ip`,`is_banned`) 
-                                        VALUES ('{$row['userId']}','{$row['userName']}','{$row['userLastName']}','{$row['userEmail']}','{$createdAt}','{$row['userLastIp']}','{$row['userActivated']}','{$row['userLang']}','{$password}','{$areaCode}','{$phone}','{$emilVerified}','{$lastActivity}','{$row['userLastIp']}','{$isBanned}')"];
-//        $sqls = ["mobiles" => "INSERT INTO new2.users(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
-//        $sqls = ["dResidencies" => "INSERT INTO new2.document_residencies(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
-//        $sqls = ["locations" => "INSERT INTO new2.user_locations(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
+                if ($row['userConfirmed'] == 1) {
+                    $isBanned = 0;
+                } else {
+                    $isBanned = 1;
+                }
+                $registerationDate=Verta::parse($row['legalInfoRegistrationDate'])->datetime();
+                $experienceData = $this->getRelationData('profile_experiences', $row['userExperience'], 'value');
+                $gender = $row['userGender'] == 'm' ? 'Male' : 'Female';
+                $genderData = $this->getRelationData('profile_genders', $gender, 'value');
+                $tradeStyleData = $this->getRelationData('profile_trade_styles', $row['userTradeStyle'], 'value');
+                // one to many => $tradeStyleData = $this->getRelationData('profile_trade_styles', $row['userTradeAssets'], 'value');
+                dd($tradeStyleData['id']);
+
+                $sqls = [];
+//                $sqls["user"] = "INSERT INTO {$this->config['dbnameNew']}.users(`id`,`first_name`,`last_name`,`email`,`created_at`,`last_ip`,`is_active`,`language`,`password`,`phone_country_code`,`phone`,`email_verified_at`,`last_activity`,`is_banned`,`pin_count`,`last_login`)
+//                                        VALUES ('{$row['userId']}','{$row['userName']}','{$row['userLastName']}','{$row['userEmail']}','{$createdAt}','{$row['userLastIp']}','{$row['userActivated']}','{$row['userLang']}','{$password}','{$areaCode}','{$phone}','{$emilVerified}','{$lastActivity}','{$isBanned}','{$row['userPincount']}','{$lastLogin}')";
+//                $sqls["mobile"] = "INSERT INTO {$this->config['dbnameNew']}.mobiles(`user_id`,`mobile`,`mobile_country_code`,`is_active`)
+//                                        VALUES ('{$row['userId']}','{$mobile}','{$areaCodeMobile}','{$row['userMobileState']}')";
+//                $sqls["profile"] = "INSERT INTO {$this->config['dbnameNew']}.user_profiles(`user_id`,`experience_id`,`gender_id`,`hear_id`,`trade_style_id`,`hear_desc`,`birth_date`,`profession`,`pin_code`,`trade_asset_id`)
+//                                          VALUES ('{$row['userId']}','{$experienceData['id']}','{$genderData['id']}','{$genderData['userHear']}','{$tradeStyleData['id']}','{$row['userHearDesc']}','{$row['userBirthDay']}','{$row['userProfession']}','{$row['userPincode']}')";
+                $sqls["dResidency"] = "INSERT INTO {$this->config['dbnameNew']}.document_residencies(`user_id`,`address`) 
+                                          VALUES ('{$row['userId']}','{$experienceData['id']}','{$row['userAddress']}')";
+                $sqls["dlegal"] = "INSERT INTO {$this->config['dbnameNew']}.document_legals(`user_id`,`company_type_id`,`company_name`,`company_national_id`,`registration_city`,`registration_date`) 
+                                          VALUES ('{$row['userId']}','{$row['legalInfoCompanyType']}','{$row['legalInfoCompanyName']}','{$row['legalInfoNationalId']}','{$row['legalInfoRegistrationCity']}','{$registerationDate}')";
 //        $sqls = ["fatf" => "INSERT INTO new2.financial_action_task_force_answer_users(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
 //
+//                dd($sqls);
                 foreach ($sqls as $sql) {
-                    if (mysqli_query($this->dbOld, $sql)) {
+                    if (mysqli_query($this->dbNew, $sql)) {
                         echo "New record created successfully" . '<br>';
                     } else {
-                        echo "Error: " . $sql . "<br>" . mysqli_error($this->dbOld);
+                        echo "Error: " . $sql . "<br>" . mysqli_error($this->dbNew);
                     }
                 }
             }
         } else {
-            echo "Error: " . $sqlSingle . "<br>" . mysqli_error($connections['old']);
+            echo "Error: " . $this->sqlSingle . "<br>" . mysqli_error($this->dbOld);
         }
     }
 
@@ -336,6 +357,25 @@ class Controller extends BaseController
         }
         $this->dbOld = $connectionOld;
         $this->dbNew = $connectionNew;
+    }
+
+    function getRelationData($table, $column, $value)
+    {
+        $query = "select * from  {$this->config['dbnameNew']}.{$table};";
+        if (mysqli_query($this->dbNew, $query)) {
+            $result = mysqli_query($this->dbNew, $query);
+            foreach (mysqli_fetch_all($result, MYSQLI_ASSOC) as $r) {
+//                dump(strpos($r[$value], $column) );
+                if (strpos($r[$value], $column) !== false) {
+//                if (str_contains($r[$value], $column) !== false){
+                    return $r;
+                }
+            }
+            return false;
+//            dd('s');
+        } else {
+            echo "Error: " . $query . "<br>" . mysqli_error($this->dbNew);
+        }
     }
 
     function convertNumber($number)

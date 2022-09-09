@@ -66,6 +66,7 @@ $sqlSingle = "select
 ;";
 if (mysqli_query($connections['old'], $sqlSingle)) {
     $result = mysqli_query($connections['old'], $sqlSingle);
+    dd('sdf');
 //            $data[$table] = $result->fetch_assoc();
     $data = mysqli_fetch_all($result, MYSQLI_ASSOC);
 //    echo '<pre>';var_dump($data);die;
@@ -77,9 +78,11 @@ if (mysqli_query($connections['old'], $sqlSingle)) {
         $createdAt = date("Y-m-d", $row['userCreatedAt']);
         $userMobile = $row['userMobile'];
         $password = base64_decode($row['password']);
+//        $emailVerified= now();
+        dd('sd');
         echo '<pre>';var_dump($password);die;
-        $sqls = ["users" => "INSERT INTO new2.users(`id`,`first_name`,`last_name`,`email`,`created_at`,`last_ip`,`is_active`,`language`,`password`) 
-                                        VALUES ('{$row['userId']}','{$row['userName']}','{$row['userLastName']}','{$row['userEmail']}','$createdAt}','{$row['userLastIp']}','{$row['userActivated']}','{$row['userLang']}','{$row['password']}')"];
+        $sqls = ["users" => "INSERT INTO new2.users(`id`,`first_name`,`last_name`,`email`,`created_at`,`last_ip`,`is_active`,`language`,`password`,`email_verified_at`) 
+                                        VALUES ('{$row['userId']}','{$row['userName']}','{$row['userLastName']}','{$row['userEmail']}','$createdAt}','{$row['userLastIp']}','{$row['userActivated']}','{$row['userLang']}','{$row['password']}','{$emailVerified}')"];
 //        $sqls = ["mobiles" => "INSERT INTO new2.users(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
 //        $sqls = ["dResidencies" => "INSERT INTO new2.document_residencies(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];
 //        $sqls = ["locations" => "INSERT INTO new2.user_locations(id,first_name) VALUES ('{$row['userId']}','{$row['userName']}')"];

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Hekmatinasser\Verta\Facades\Verta;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Bus\DispatchesJobs;
@@ -281,7 +282,7 @@ class Controller extends BaseController
     ,users.pincount as userPincount
     ,users.activated as userActivated
     ,users.confirmed as userConfirmed
-    ,users.referral as referralId
+    ,users.referral as userReferral
     ,users.lang as userLang
     ,users.mobstat as userMobileState   
     ,users_passwd.passwd as password
@@ -300,24 +301,18 @@ class Controller extends BaseController
     {
         $this->connectToDbs($this->config);
 
-//        $Q = "INSERT INTO {$this->config['dbnameNew']}.`deposit_exchange_bank_accounts` (`id`, `account_number`, `card_number`, `iban`, `card_name`, `bank_name`) VALUES
-//(1, '44500081', '58598311200000', 'IR4701522081', 'طھط³طھ 1', 'FG'),
-//(2, '339000003', '603769700000', 'IR1814003', 'طھط³طھ 2', 'FGFG'),
-//(3, '11000083', '6104000005', 'IR7101221783', 'طھط³طھ 3', 'FGFG'),
-//(4, '036200003', '6000000046', 'IR027478003', 'طھط³طھ 4', 'FG');";
-//        $this->insertSingleRow($Q,'deposit_exchange_bank_accounts');
+        $Q = "INSERT INTO {$this->config['dbnameNew']}.`deposit_exchange_bank_accounts` (`id`, `account_number`, `card_number`, `iban`, `card_name`, `bank_name`) VALUES
+(1, '44500081', '58598311200000', 'IR4701522081', 'طھط³طھ 1', 'FG'),
+(2, '339000003', '603769700000', 'IR1814003', 'طھط³طھ 2', 'FGFG'),
+(3, '11000083', '6104000005', 'IR7101221783', 'طھط³طھ 3', 'FGFG'),
+(4, '036200003', '6000000046', 'IR027478003', 'طھط³طھ 4', 'FG');";
+        $this->insertSingleRow($Q, 'deposit_exchange_bank_accounts');
 
         if (mysqli_query($this->dbOld, $this->sqlSingle)) {
             $result = mysqli_query($this->dbOld, $this->sqlSingle);
 //            $data[$table] = $result->fetch_assoc();
             $data = mysqli_fetch_all($result, MYSQLI_ASSOC);
 
-//            foreach ($data as $row) {
-//                if (empty($row['userAddress'])){
-//                    $row['userAddress']=null;
-//                }
-//                dump($row['userAddress']);
-//            }die;
             foreach ($data as $row) {
                 if (empty($row['userAddress'])) {
                     $row['userAddress'] = null;
@@ -348,91 +343,63 @@ class Controller extends BaseController
                 $gender = $row['userGender'] == 'm' ? 'Male' : 'Female';
                 $genderData = $this->getRelationData('profile_genders', $gender, 'value');
                 $tradeStyleData = $this->getRelationData('profile_trade_styles', $row['userTradeStyle'], 'value');
-                $asset=explode('|', $row['userTradeAssets'])[0];
+                $asset = explode('|', $row['userTradeAssets'])[0];
                 $tradeAssetData = $this->getRelationData('profile_trade_assets', ucfirst($asset), 'value');
-                $fatfs=explode('|', $row['userFatf']);
-                foreach ($fatfs as $fatf){
+                $fatfs = explode('|', $row['userFatf']);
+                foreach ($fatfs as $fatf) {
                     $fatfsData[] = $this->getRelationData('financial_action_task_force_questions', $fatf, 'key');
                 }
+                $referral = $this->decodeReferral($row['userReferral']);
 
                 $sqls = [];
-                $sqls["user"] = "INSERT INTO {$this->config['dbnameNew']}.users(`id`,`first_name`,`last_name`,`email`,`created_at`,`last_ip`,`is_active`,`language`,`password`,`phone_country_code`,`phone`,`email_verified_at`,`last_activity`,`is_banned`,`pin_count`,`last_login`)
+                $sqls["users"] = "INSERT INTO {$this->config['dbnameNew']}.users(`id`,`first_name`,`last_name`,`email`,`created_at`,`last_ip`,`is_active`,`language`,`password`,`phone_country_code`,`phone`,`email_verified_at`,`last_activity`,`is_banned`,`pin_count`,`last_login`)
                                         VALUES ('{$row['userId']}','{$row['userName']}','{$row['userLastName']}','{$row['userEmail']}','{$createdAt}','{$row['userLastIp']}','{$row['userActivated']}','{$row['userLang']}','{$password}','{$areaCode}','{$phone}','{$emilVerified}','{$lastActivity}','{$isBanned}','{$row['userPincount']}','{$lastLogin}')";
-//                $sqls["mobile"] = "INSERT INTO {$this->config['dbnameNew']}.mobiles(`user_id`,`mobile`,`mobile_country_code`,`is_active`)
-//                                        VALUES ('{$row['userId']}','{$mobile}','{$areaCodeMobile}','{$row['userMobileState']}')";
-//                $sqls["profile"] = "INSERT INTO {$this->config['dbnameNew']}.user_profiles(`user_id`,`experience_id`,`gender_id`,`hear_id`,`trade_style_id`,`hear_desc`,`birth_date`,`profession`,`pin_code`,`trade_asset_id`)
-//                                          VALUES('{$row['userId']}','{$experienceData['id']}','{$genderData['id']}','{$row['userHear']}','{$tradeStyleData['id']}','{$row['userHearDesc']}','{$row['userBirthDay']}','{$row['userProfession']}','{$row['userPincode']}','{$tradeAssetData['id']}')";
-//                if (is_null($row["userAddress"])) {
-//                    $sqls["dResidency"] = "INSERT INTO {$this->config['dbnameNew']}.document_residencies(`user_id`, `address`)
-//                                          VALUES('{$row['userId']}',null)";
-//                } else {
-//                    $sqls["dResidency"] = "INSERT INTO {$this->config['dbnameNew']}.document_residencies(`user_id`, `address`)
-//                                          VALUES('{$row['userId']}','{$row["userAddress"]}')";
-//                }
-//
-//                if (is_null($registerationDate)) {$sqls["dlegal"] = "INSERT INTO {$this->config['dbnameNew']}.document_legals(`user_id`, `company_type_id`, `company_name`, `company_national_id`, `registration_city`, `registration_date`)
-//                                          VALUES('{$row['userId']}','{$row['legalInfoCompanyType']}','{$row['legalInfoCompanyName']}','{$row['legalInfoNationalId']}','{$row['legalInfoRegistrationCity']}',null)";
-//                } else {
-//                    $sqls["dlegal"] = "INSERT INTO {$this->config['dbnameNew']}.document_legals(`user_id`, `company_type_id`, `company_name`, `company_national_id`, `registration_city`, `registration_date`)
-//                                          VALUES('{$row['userId']}','{$row['legalInfoCompanyType']}','{$row['legalInfoCompanyName']}','{$row['legalInfoNationalId']}','{$row['legalInfoRegistrationCity']}','{$registerationDate}')";
-//                }
+                $sqls["mobiles"] = "INSERT INTO {$this->config['dbnameNew']}.mobiles(`user_id`,`mobile`,`mobile_country_code`,`is_active`)
+                                        VALUES ('{$row['userId']}','{$mobile}','{$areaCodeMobile}','{$row['userMobileState']}')";
+                $sqls["user_profiles"] = "INSERT INTO {$this->config['dbnameNew']}.user_profiles(`user_id`,`experience_id`,`gender_id`,`hear_id`,`trade_style_id`,`hear_desc`,`birth_date`,`profession`,`pin_code`,`trade_asset_id`)
+                                          VALUES('{$row['userId']}','{$experienceData['id']}','{$genderData['id']}','{$row['userHear']}','{$tradeStyleData['id']}','{$row['userHearDesc']}','{$row['userBirthDay']}','{$row['userProfession']}','{$row['userPincode']}','{$tradeAssetData['id']}')";
+                if (is_null($row["userAddress"])) {
+                    $sqls["document_residencies"] = "INSERT INTO {$this->config['dbnameNew']}.document_residencies(`user_id`, `address`)
+                                          VALUES('{$row['userId']}',null)";
+                } else {
+                    $sqls["document_residencies"] = "INSERT INTO {$this->config['dbnameNew']}.document_residencies(`user_id`, `address`)
+                                          VALUES('{$row['userId']}','{$row["userAddress"]}')";
+                }
 
-//                $sqls["location"] = "INSERT INTO {$this->config['dbnameNew']}.user_locations(`user_id`,`residency_id`,`citizenship_id`,`city`)
-//                                          VALUES ('{$row['userId']}','{$row['userResidency']}','{$row['userCitizenShip']}','{$row['userCity']}')";
+                $sqls["user_locations"] = "INSERT INTO {$this->config['dbnameNew']}.user_locations(`user_id`,`residency_id`,`citizenship_id`,`city`)
+                                          VALUES ('{$row['userId']}','{$row['userResidency']}','{$row['userCitizenShip']}','{$row['userCity']}')";
+
+                if (is_null($registerationDate)) {
+                    $sqls["document_legals"] = "INSERT INTO {$this->config['dbnameNew']}.document_legals(`user_id`, `company_type_id`, `company_name`, `company_national_id`, `registration_city`, `registration_date`)
+                                          VALUES('{$row['userId']}','{$row['legalInfoCompanyType']}','{$row['legalInfoCompanyName']}','{$row['legalInfoNationalId']}','{$row['legalInfoRegistrationCity']}',null)";
+                } else {
+                    $sqls["document_legals"] = "INSERT INTO {$this->config['dbnameNew']}.document_legals(`user_id`, `company_type_id`, `company_name`, `company_national_id`, `registration_city`, `registration_date`)
+                                          VALUES('{$row['userId']}','{$row['legalInfoCompanyType']}','{$row['legalInfoCompanyName']}','{$row['legalInfoNationalId']}','{$row['legalInfoRegistrationCity']}','{$registerationDate}')";
+                }
+
+                $qu = "select * from  {$this->config['dbnameNew']}.document_legals;";
+                if (mysqli_query($this->dbNew, $qu)) {
+                    $result = mysqli_query($this->dbNew, $qu);
+                    $rr=mysqli_fetch_all($result, MYSQLI_ASSOC);
+
+                    return $rr;
+                } else {
+                    echo "Error: " . $qu . "<br>" . mysqli_error($this->dbNew);
+                }
+
+
+                // insert data to document legal images
+                $this->insertToLegalImages($row['userId']);
 
                 foreach ($sqls as $key => $sql) {
-                    if (mysqli_query($this->dbNew, $sql)) {
-                        echo "New record created successfully on table |{$key}|" . '<br>';
-                    } else {
-                        echo "Error: " . $sql . "<br>" . mysqli_error($this->dbNew);
-                    }
+                    $this->insertSingleRow($sql, $key);
                 }
 
                 //                insert to fatf table answers
-                foreach ($fatfsData as $f){
-                    $sql="INSERT INTO {$this->config['dbnameNew']}.financial_action_task_force_answer_users(`user_id`,`question_id`,`value`)
-                                          VALUES ('{$row['userId']}','{$f['id']}',1)";
+                $this->insertToFatf($fatfsData, $row['userId']);
 
-                    if (mysqli_query($this->dbNew, $sql)) {
-                        echo "New record created successfully on table |financial_action_task_force_answer_users|" . '<br>';
-                    } else {
-                        echo "Error: " . $sql . "<br>" . mysqli_error($this->dbNew);
-                    }
-                }
-
-                // insert data to document legal images
-//                $docLegalMultiSql="select
-//    users_legal_documents.legal_document_id as legalDocumentId
-//    ,users_legal_documents.cabin_id as userId
-//    ,users_legal_documents.file_path as filePath
-//    ,users_legal_documents.date_time as createdAt
-//    from pcmfx_cabin_old.users_legal_documents
-//    where users_legal_documents.cabin_id={$row['userId']}
-//;";
-//                if (mysqli_query($this->dbOld, $docLegalMultiSql)) {
-//                    $result = mysqli_query($this->dbOld, $docLegalMultiSql);
-//                    $newData = mysqli_fetch_all($result, MYSQLI_ASSOC);
-//                    foreach ($newData as $r){
-//                        if (is_null($r['createdAt'])){
-//                            $sql="INSERT INTO {$this->config['dbnameNew']}.document_legal_images(`document_legal_id`,`name`,`created_at`)
-//                                          VALUES ('{$r['legalDocumentId']}','{$r['filePath']}',null)";
-//                        }else{
-//                            $sql="INSERT INTO {$this->config['dbnameNew']}.document_legal_images(`document_legal_id`,`name`,`created_at`)
-//                                          VALUES ('{$r['legalDocumentId']}','{$r['filePath']}','{$r['createdAt']}')";
-//                        }
-//
-//                        if (mysqli_query($this->dbNew, $sql)) {
-//                            echo "New record created successfully on table |document_legal_images|" . '<br>';
-//                        } else {
-//                            echo "Error: " . $sql . "<br>" . mysqli_error($this->dbNew);
-//                        }
-//                    }
-//                }
-//                else {
-//                    echo "Error: " . $this->sqlMulti . "<br>" . mysqli_error($this->dbOld);
-//                }
-
-
+                //add to referral table
+                $this->insertToReferral($row['userId'], $referral);
 
             }
         } else {
@@ -440,11 +407,11 @@ class Controller extends BaseController
         }
 
         // insert after user update
-        $qq="INSERT INTO {$this->config['dbnameNew']}.`deposit_exchange_bank_account_histories` (`id`, `bank_account_id`, `user_id`, `currency_id`, `amount`, `created_at`) VALUES
-(368, 1, 26756, 1, 1234, '2022-09-08 10:28:39'),
-(369, 2, 27152, 2, 4567, '2022-09-07 10:28:39'),
-(370, 3, 27664, 3, 7896, '2022-09-06 10:28:39');";
-        $this->insertSingleRow($qq,'deposit_exchange_bank_account_histories');
+//        $qq = "INSERT INTO {$this->config['dbnameNew']}.`deposit_exchange_bank_account_histories` (`id`, `bank_account_id`, `user_id`, `currency_id`, `amount`, `created_at`) VALUES
+//(368, 1, 26756, 1, 1234, '2022-09-08 10:28:39'),
+//(369, 2, 27152, 2, 4567, '2022-09-07 10:28:39'),
+//(370, 3, 27664, 3, 7896, '2022-09-06 10:28:39');";
+//        $this->insertSingleRow($qq, 'deposit_exchange_bank_account_histories');
     }
 
     function connectToDbs($db)
@@ -463,11 +430,8 @@ class Controller extends BaseController
         $query = "select * from  {$this->config['dbnameNew']}.{$table};";
         if (mysqli_query($this->dbNew, $query)) {
             $result = mysqli_query($this->dbNew, $query);
-//            dd(mysqli_fetch_all($result, MYSQLI_ASSOC));
             foreach (mysqli_fetch_all($result, MYSQLI_ASSOC) as $r) {
-//                dump(strpos($r[$value], 'Commodities') ,$r[$value], $column);
                 if (strpos($r[$value], $column) !== false) {
-//                if (str_contains($r[$value], $column) !== false){
                     return $r;
                 }
             }
@@ -479,7 +443,6 @@ class Controller extends BaseController
 
     function convertNumber($number)
     {
-
         $numberExplode = explode('+', $number);
         $num = "";
 
@@ -506,9 +469,7 @@ class Controller extends BaseController
 
     }
 
-    /**
-     * @return void
-     */
+
     public function insertSingleRow($sql, $table): void
     {
         if (mysqli_query($this->dbNew, $this->sqlSingle)) {
@@ -519,6 +480,79 @@ class Controller extends BaseController
             }
         } else {
             echo "Error: " . $this->sqlSingle . "<br>" . mysqli_error($this->dbOld);
+        }
+    }
+
+
+    function decodeReferral($code, $base64 = true)
+    {
+        $salt = 786;
+        $keys = array(
+            0 => '87',
+            1 => '54',
+            2 => '11',
+            3 => '95',
+            4 => '32',
+            5 => '75',
+            6 => '15',
+            7 => '61',
+            8 => '94',
+            9 => '38',
+        );
+        $code = $base64 === true ? substr(base64_decode($code), 0, -3) : $code;
+        $id = '';
+        foreach (str_split($code, 2) as $key) {
+            $array = array_keys($keys, $key);
+            $id .= $array[0];
+        }
+        return $id;
+    }
+
+    public function insertToFatf(array $fatfsData, $userId): void
+    {
+        foreach ($fatfsData as $f) {
+            $sql1 = "INSERT INTO {$this->config['dbnameNew']}.financial_action_task_force_answer_users(`user_id`,`question_id`,`value`)
+                                          VALUES ('{$userId}','{$f['id']}',1)";
+
+            $this->insertSingleRow($sql1, 'financial_action_task_force_answer_users');
+        }
+    }
+
+    public function insertToReferral($userId, string $referral): void
+    {
+        $sql2 = "INSERT INTO {$this->config['dbnameNew']}.referrals(`user_id`,`value`)
+                                          VALUES ('{$userId}','{$referral}')";
+
+        $this->insertSingleRow($sql2, 'referrals');
+    }
+
+    public function insertToLegalImages($userId): void
+    {
+        $docLegalMultiSql = "select
+    users_legal_documents.legal_document_id as id
+    ,users_legal_documents.cabin_id as userId
+    ,users_legal_documents.file_path as filePath
+    ,users_legal_documents.date_time as createdAt
+    from pcmfx_cabin_old.users_legal_documents
+    where users_legal_documents.cabin_id={$userId}
+;";
+
+        if (mysqli_query($this->dbOld, $docLegalMultiSql)) {
+            $result = mysqli_query($this->dbOld, $docLegalMultiSql);
+            $newData = mysqli_fetch_all($result, MYSQLI_ASSOC);
+            foreach ($newData as $r) {
+                if (is_null($r['createdAt'])) {
+                    $sqlr = "INSERT INTO {$this->config['dbnameNew']}.document_legal_images(`document_legal_id`,`name`)
+                                          VALUES ('{$r['legalDocumentId']}','{$r['filePath']}')";
+                } else {
+                    $sqlr = "INSERT INTO {$this->config['dbnameNew']}.document_legal_images(`document_legal_id`,`name`,`created_at`)
+                                          VALUES ('{$r['legalDocumentId']}','{$r['filePath']}','{$r['createdAt']}')";
+                }
+                $this->insertSingleRow($sqlr, 'document_legal_images');
+
+            }
+        } else {
+            echo "Error: " . $this->sqlMulti . "<br>" . mysqli_error($this->dbOld);
         }
     }
 }

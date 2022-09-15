@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use Hekmatinasser\Verta\Facades\Verta;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\Hash;
+use function PHPUnit\Framework\isEmpty;
 
 class Controller extends BaseController
 {
@@ -359,8 +359,8 @@ class Controller extends BaseController
                 $sqls["user_profiles"] = "INSERT INTO {$this->config['dbnameNew']}.user_profiles(`user_id`,`experience_id`,`gender_id`,`hear_id`,`trade_style_id`,`hear_desc`,`birth_date`,`profession`,`pin_code`,`trade_asset_id`)
                                           VALUES('{$row['userId']}','{$experienceData['id']}','{$genderData['id']}','{$row['userHear']}','{$tradeStyleData['id']}','{$row['userHearDesc']}','{$row['userBirthDay']}','{$row['userProfession']}','{$row['userPincode']}','{$tradeAssetData['id']}')";
                 if (is_null($row["userAddress"])) {
-                    $sqls["document_residencies"] = "INSERT INTO {$this->config['dbnameNew']}.document_residencies(`user_id`, `address`)
-                                          VALUES('{$row['userId']}',null)";
+                    $sqls["document_residencies"] = "INSERT INTO {$this->config['dbnameNew']}.document_residencies(`user_id`)
+                                          VALUES('{$row['userId']}')";
                 } else {
                     $sqls["document_residencies"] = "INSERT INTO {$this->config['dbnameNew']}.document_residencies(`user_id`, `address`)
                                           VALUES('{$row['userId']}','{$row["userAddress"]}')";
@@ -377,20 +377,10 @@ class Controller extends BaseController
                                           VALUES('{$row['userId']}','{$row['legalInfoCompanyType']}','{$row['legalInfoCompanyName']}','{$row['legalInfoNationalId']}','{$row['legalInfoRegistrationCity']}','{$registerationDate}')";
                 }
 
-                $qu = "select * from  {$this->config['dbnameNew']}.document_legals;";
-                if (mysqli_query($this->dbNew, $qu)) {
-                    $result = mysqli_query($this->dbNew, $qu);
-                    $rr=mysqli_fetch_all($result, MYSQLI_ASSOC);
+                if (!isEmpty($this->getLegalRelatedUser())){
 
-                    return $rr;
-                } else {
-                    echo "Error: " . $qu . "<br>" . mysqli_error($this->dbNew);
+                    $this->insertToLegalImages($row['userId'], $this->getLegalRelatedUser()[0]['id']);
                 }
-
-
-                // insert data to document legal images
-                $this->insertToLegalImages($row['userId']);
-
                 foreach ($sqls as $key => $sql) {
                     $this->insertSingleRow($sql, $key);
                 }
@@ -526,7 +516,7 @@ class Controller extends BaseController
         $this->insertSingleRow($sql2, 'referrals');
     }
 
-    public function insertToLegalImages($userId): void
+    public function insertToLegalImages($userId, $legalId): void
     {
         $docLegalMultiSql = "select
     users_legal_documents.legal_document_id as id
@@ -543,16 +533,28 @@ class Controller extends BaseController
             foreach ($newData as $r) {
                 if (is_null($r['createdAt'])) {
                     $sqlr = "INSERT INTO {$this->config['dbnameNew']}.document_legal_images(`document_legal_id`,`name`)
-                                          VALUES ('{$r['legalDocumentId']}','{$r['filePath']}')";
+                                          VALUES ('{$legalId}','{$r['filePath']}')";
                 } else {
                     $sqlr = "INSERT INTO {$this->config['dbnameNew']}.document_legal_images(`document_legal_id`,`name`,`created_at`)
-                                          VALUES ('{$r['legalDocumentId']}','{$r['filePath']}','{$r['createdAt']}')";
+                                          VALUES ('{$legalId}','{$r['filePath']}','{$r['createdAt']}')";
                 }
                 $this->insertSingleRow($sqlr, 'document_legal_images');
 
             }
         } else {
-            echo "Error: " . $this->sqlMulti . "<br>" . mysqli_error($this->dbOld);
+            echo "Error: " . $docLegalMultiSql . "<br>" . mysqli_error($this->dbOld);
+        }
+    }
+
+    public function getLegalRelatedUser()
+    {
+        $qu = "select * from  {$this->config['dbnameNew']}.document_legals;";
+        if (mysqli_query($this->dbNew, $qu)) {
+            $result = mysqli_query($this->dbNew, $qu);
+            return mysqli_fetch_all($result, MYSQLI_ASSOC);
+
+        } else {
+            echo "Error: " . $qu . "<br>" . mysqli_error($this->dbNew);
         }
     }
 }

@@ -299,6 +299,7 @@ class Controller extends BaseController
 
     public function index()
     {
+
         $this->connectToDbs($this->config);
 
         $Q = "INSERT INTO {$this->config['dbnameNew']}.`deposit_exchange_bank_accounts` (`id`, `account_number`, `card_number`, `iban`, `card_name`, `bank_name`) VALUES
@@ -384,6 +385,10 @@ class Controller extends BaseController
                 foreach ($sqls as $key => $sql) {
                     $this->insertSingleRow($sql, $key);
                 }
+
+                $tickets=
+    
+
 
                 //                insert to fatf table answers
                 $this->insertToFatf($fatfsData, $row['userId']);
@@ -525,6 +530,36 @@ class Controller extends BaseController
     ,users_legal_documents.date_time as createdAt
     from pcmfx_cabin_old.users_legal_documents
     where users_legal_documents.cabin_id={$userId}
+;";
+
+        if (mysqli_query($this->dbOld, $docLegalMultiSql)) {
+            $result = mysqli_query($this->dbOld, $docLegalMultiSql);
+            $newData = mysqli_fetch_all($result, MYSQLI_ASSOC);
+            foreach ($newData as $r) {
+                if (is_null($r['createdAt'])) {
+                    $sqlr = "INSERT INTO {$this->config['dbnameNew']}.document_legal_images(`document_legal_id`,`name`)
+                                          VALUES ('{$legalId}','{$r['filePath']}')";
+                } else {
+                    $sqlr = "INSERT INTO {$this->config['dbnameNew']}.document_legal_images(`document_legal_id`,`name`,`created_at`)
+                                          VALUES ('{$legalId}','{$r['filePath']}','{$r['createdAt']}')";
+                }
+                $this->insertSingleRow($sqlr, 'document_legal_images');
+
+            }
+        } else {
+            echo "Error: " . $docLegalMultiSql . "<br>" . mysqli_error($this->dbOld);
+        }
+    }
+
+    public function insertToTickets($userId, $legalId): void
+    {
+        $docLegalMultiSql = "select
+    users_legal_documents.legal_document_id as id
+    ,users_legal_documents.cabin_id as userId
+    ,users_legal_documents.file_path as filePath
+    ,users_legal_documents.date_time as createdAt
+    from pcmfx_cabin_old.tickets
+    where tickets.uid={$userId}
 ;";
 
         if (mysqli_query($this->dbOld, $docLegalMultiSql)) {
